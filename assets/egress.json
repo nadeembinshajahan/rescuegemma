@@ -1,0 +1,64 @@
+{
+  "_comment": "Two-phase mission with fine-grained segments so the agent must issue many sequential commands. find_segments = drone alone, finding Manu. segments = escort phase with Manu following. One escort segment is flagged 'lags' to force a reassurance beat.",
+  "person_start": "workbench upstairs",
+  "exit": "street level downstairs",
+  "find_segments": [
+    {
+      "id": "leave_operator",
+      "scout_frames": ["find_01.jpg"],
+      "follow_behaviour": "follows"
+    },
+    {
+      "id": "approach_stairs",
+      "scout_frames": ["find_02.jpg"],
+      "follow_behaviour": "follows"
+    },
+    {
+      "id": "ascend_stairs",
+      "scout_frames": ["find_03.jpg"],
+      "follow_behaviour": "follows"
+    },
+    {
+      "id": "top_of_stairs",
+      "scout_frames": ["find_04.jpg"],
+      "follow_behaviour": "follows"
+    },
+    {
+      "id": "enter_workshop",
+      "scout_frames": ["find_05.jpg"],
+      "follow_behaviour": "follows"
+    }
+  ],
+  "segments": [
+    {
+      "id": "workbench_to_doorway",
+      "scout_frames": ["scout_01.jpg"],
+      "lead_frames": ["lead_01.jpg"],
+      "follow_behaviour": "follows"
+    },
+    {
+      "id": "doorway_to_corridor",
+      "scout_frames": ["scout_02.jpg"],
+      "lead_frames": ["lead_02.jpg"],
+      "follow_behaviour": "follows"
+    },
+    {
+      "id": "corridor_to_stairtop",
+      "scout_frames": ["scout_03.jpg"],
+      "lead_frames": ["lead_03.jpg"],
+      "follow_behaviour": "lags"
+    },
+    {
+      "id": "stairs_descent",
+      "scout_frames": ["scout_04.jpg"],
+      "lead_frames": ["lead_04.jpg"],
+      "follow_behaviour": "follows"
+    },
+    {
+      "id": "to_exit_door",
+      "scout_frames": ["scout_05.jpg"],
+      "lead_frames": ["lead_05.jpg"],
+      "follow_behaviour": "follows"
+    }
+  ]
+}

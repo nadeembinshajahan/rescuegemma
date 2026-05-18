@@ -1,0 +1,8 @@
+[project]
+name = "rescuegemma"
+version = "0.1.0"
+description = "Voice-commanded autonomous indoor SAR agent on Gemma 4"
+requires-python = ">=3.10"
+dependencies = []
+[project.optional-dependencies]
+gemma = ["google-genai>=0.3.0"]

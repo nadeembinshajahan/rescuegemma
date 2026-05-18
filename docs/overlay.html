@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>RescueGemma — reasoning overlay</title>
+<style>
+  :root {
+    --bg: #0a0d12;
+    --panel: #11161d;
+    --line: #1d242e;
+    --ink: #e7ecf3;
+    --dim: #8a93a0;
+    --accent: #7dd3fc;
+    --warn: #fbbf24;
+    --bad: #f87171;
+    --good: #86efac;
+    --speak: #fde68a;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0;
+    background: var(--bg); color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    height: 100vh; overflow: hidden;
+  }
+  header {
+    padding: 14px 22px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 18px;
+  }
+  header h1 { font-size: 16px; font-weight: 600; margin: 0; letter-spacing: 0.04em; text-transform: uppercase; color: var(--dim); }
+  header h1 b { color: var(--ink); }
+  .controls { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+  button {
+    background: var(--accent); color: #0a0d12; border: 0;
+    padding: 8px 16px; border-radius: 6px; cursor: pointer;
+    font-weight: 600; font-size: 13px; letter-spacing: 0.03em;
+  }
+  button.secondary { background: var(--line); color: var(--ink); }
+  button:disabled { opacity: 0.4; cursor: default; }
+  #panel { padding: 18px 22px; overflow-y: auto; height: calc(100vh - 56px); }
+  .turn {
+    border-left: 2px solid var(--line); padding: 12px 0 16px 16px;
+    margin-bottom: 4px; opacity: 0; transform: translateY(6px);
+    transition: opacity 220ms ease, transform 220ms ease, border-color 220ms ease;
+  }
+  .turn.on { opacity: 1; transform: none; border-left-color: var(--accent); }
+  .turn .meta { display: flex; gap: 10px; align-items: center; font-size: 12px; color: var(--dim); margin-bottom: 6px; }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 999px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
+    background: var(--line); color: var(--ink);
+  }
+  .badge.audio { background: #1e3a5c; color: #bfe1ff; }
+  .badge.vision { background: #3a2a5c; color: #d6c0ff; }
+  .badge.tone-urgent { background: #5c1d1d; color: #ffd2d2; }
+  .badge.tone-calm_directive { background: #1d4f30; color: #c8f5d6; }
+  .badge.tone-reassuring { background: #5c4a1d; color: #ffe9b0; }
+  .badge.fail { background: #5c1d1d; color: #ffd2d2; }
+  .step { color: var(--dim); font-family: var(--mono); }
+  .thought { font-size: 15px; line-height: 1.45; margin: 4px 0 10px; color: var(--ink); }
+  .call {
+    font-family: var(--mono); font-size: 13px; line-height: 1.5;
+    background: var(--panel); border: 1px solid var(--line);
+    padding: 10px 12px; border-radius: 6px; color: var(--good);
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .call .name { color: var(--accent); }
+  .speak {
+    margin-top: 10px; padding: 10px 14px; border-left: 3px solid var(--speak);
+    background: rgba(253, 230, 138, 0.06); color: var(--speak);
+    font-size: 16px; line-height: 1.5; font-style: italic;
+  }
+  .obs { margin-top: 8px; font-size: 12.5px; color: var(--dim); line-height: 1.5; }
+  .obs b { color: var(--ink); font-weight: 600; }
+  .finding { margin-top: 8px; font-size: 13px; color: var(--warn); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><b>RescueGemma</b> &nbsp;·&nbsp; reasoning overlay</h1>
+  <div class="controls">
+    <button id="play">Play</button>
+    <button id="step" class="secondary">Step</button>
+    <button id="reset" class="secondary">Reset</button>
+  </div>
+</header>
+<div id="panel"></div>
+
+<script id="inline-transcript" type="application/json">
+__TRANSCRIPT__
+</script>
+<script>
+(async function() {
+  const panel = document.getElementById("panel");
+  const btnPlay = document.getElementById("play");
+  const btnStep = document.getElementById("step");
+  const btnReset = document.getElementById("reset");
+
+  async function loadTranscript() {
+    try {
+      const r = await fetch("./mission_transcript.json", { cache: "no-store" });
+      if (r.ok) return await r.json();
+    } catch (e) { /* file:// — fall through */ }
+    try {
+      const raw = document.getElementById("inline-transcript").textContent.trim();
+      if (raw && raw !== "__TRANSCRIPT__") return JSON.parse(raw);
+    } catch (e) {}
+    return [];
+  }
+
+  const turns = await loadTranscript();
+  const VISION_TOOLS = new Set(["scout_ahead", "explore_room", "hover_and_scan", "goto_waypoint", "lead_to_exit"]);
+
+  function render() {
+    panel.innerHTML = "";
+    if (!turns.length) {
+      panel.innerHTML = '<div style="color: var(--dim); padding: 20px;">No transcript found. Run <code>python run_demo.py</code> and reopen.</div>';
+      return;
+    }
+    for (const t of turns) {
+      const el = document.createElement("div");
+      el.className = "turn";
+      const isAudio = t.step === 1;
+      const isVision = !!t.frame || VISION_TOOLS.has(t.call?.name);
+      const badges = [];
+      if (isAudio)  badges.push('<span class="badge audio">audio in</span>');
+      if (isVision) badges.push('<span class="badge vision">vision in</span>');
+      if (!t.ok)    badges.push('<span class="badge fail">refused</span>');
+      if (t.tone)   badges.push(`<span class="badge tone-${t.tone}">${t.tone.replace("_", " ")}</span>`);
+      const args = t.call?.args
+        ? Object.entries(t.call.args).map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(", ")
+        : "";
+      const callHTML = `<span class="name">${t.call?.name || "?"}</span>(${escapeHTML(args)})`;
+      const speak = t.spoken ? `<div class="speak">"${escapeHTML(t.spoken)}"</div>` : "";
+      const follow = t.follow_state ? ` &nbsp;·&nbsp; follow: <b>${t.follow_state}</b>` : "";
+      const finding = t.finding ? `<div class="finding">finding → ${escapeHTML(t.finding.type)} @ ${escapeHTML(t.finding.location)}</div>` : "";
+      el.innerHTML = `
+        <div class="meta">
+          <span class="step">step ${t.step}</span>
+          ${badges.join(" ")}
+        </div>
+        <div class="thought">${escapeHTML(t.thought || "")}</div>
+        <div class="call">${callHTML}</div>
+        ${speak}
+        <div class="obs"><b>obs:</b> ${escapeHTML(t.observation || "")}${follow}</div>
+        ${finding}
+      `;
+      panel.appendChild(el);
+    }
+  }
+  function escapeHTML(s) {
+    return String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+  }
+
+  let cursor = 0, playing = false, timer = null;
+  function showUpTo(i) {
+    panel.querySelectorAll(".turn").forEach((el, idx) => {
+      el.classList.toggle("on", idx < i);
+      if (idx === i - 1) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }
+  function tick() {
+    if (cursor >= turns.length) { stop(); return; }
+    cursor++;
+    showUpTo(cursor);
+  }
+  function play() {
+    if (playing) return;
+    playing = true; btnPlay.textContent = "Pause";
+    timer = setInterval(tick, 1600);
+  }
+  function stop() {
+    playing = false; btnPlay.textContent = "Play";
+    if (timer) clearInterval(timer); timer = null;
+  }
+  btnPlay.onclick = () => playing ? stop() : play();
+  btnStep.onclick = () => { stop(); tick(); };
+  btnReset.onclick = () => { stop(); cursor = 0; showUpTo(0); };
+
+  render();
+  showUpTo(0);
+})();
+</script>
+</body>
+</html>

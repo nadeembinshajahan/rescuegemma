@@ -1,0 +1,28 @@
+{
+  "_comment": "Replace frames with the filenames from YOUR phone walkthrough. Walk the building as if you are the drone: hallway first, then rooms. Put a distinctive visual marker (dinosaur poster / kid's backpack) in ONE room and a volunteer or mannequin lying down there. center is [north_m, east_m] from the entry point.",
+  "building": "demo_residence",
+  "rooms": [
+    {
+      "id": "hallway",
+      "center": [0.0, 0.0],
+      "frames": ["hallway_01.jpg", "hallway_02.jpg"],
+      "tags": ["corridor", "doors on both sides", "stairs ahead"],
+      "survivor": false
+    },
+    {
+      "id": "study",
+      "center": [3.0, -2.0],
+      "frames": ["study_01.jpg", "study_02.jpg"],
+      "tags": ["desk", "bookshelf", "office chair", "no posters"],
+      "survivor": false
+    },
+    {
+      "id": "kids_room",
+      "center": [4.0, 2.5],
+      "frames": ["kids_room_01.jpg", "kids_room_02.jpg", "kids_room_close.jpg"],
+      "tags": ["dinosaur posters on the wall", "single bed", "small backpack", "toys on floor"],
+      "survivor": true,
+      "survivor_state": "child-size figure prone on the floor near the window, not responding to drone audio"
+    }
+  ]
+}
